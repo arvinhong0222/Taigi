@@ -10,11 +10,11 @@ from transformers import (
     TrainingArguments,
     Trainer
 )
-from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
-from datasets import load_dataset
-from transformers import WhisperProcessor, WhisperForConditionalGeneration, TrainingArguments, Trainer
+# from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+# from datasets import load_dataset
+# from transformers import WhisperProcessor, WhisperForConditionalGeneration, TrainingArguments, Trainer
 
-processor = WhisperProcessor.from_pretrained(MODEL_NAME, language="zh", task="translate")
+# processor = WhisperProcessor.from_pretrained(MODEL_NAME, language="zh", task="translate")
 
 from transformers.trainer_utils import get_last_checkpoint
 from data_collator_ctc import DataCollatorCTCWithPadding, EvalDataCollatorCTCWithPadding  # 請確認檔案名稱正確
@@ -35,7 +35,7 @@ torch.backends.cudnn.benchmark = True
 # ===========================
 # 2. 模型與資料路徑設定
 # ===========================
-MODEL_NAME = "./model/wav2vec2-large-xlsr-53"
+MODEL_NAME = "../sslab_model/wav2vec2-large-xlsr-53"
 DATA_PATH = "../sslab_dataset/sutiau-wav"
 OUTPUT_DIR = "./wav2vec2_taiwanese"
 AUDIO_PATH = os.path.join(DATA_PATH, "train")
