@@ -127,7 +127,7 @@ print("音訊處理完成。")
 print("過濾處理失敗的資料...")
 dataset = dataset.filter(
     lambda x: x.get("漢字") is not None and x.get("input_features") is not None and
-              x.get("labels") is not None and len(x["labels"]["input_ids"]) > 0,
+            x.get("labels") is not None and len(x["labels"]["input_ids"]) > 0,
     num_proc=16
 )
 print(f"過濾完成，Train 數量： {len(dataset['train'])}, Validation 數量： {len(dataset['validation'])}")
@@ -143,13 +143,17 @@ print("建立自訂 Collator 與定義評估指標...")
 data_collator = lambda features: custom_collator(features, tokenizer=processor.tokenizer)
 
 def compute_metrics(pred):
-    pred_ids = pred.predictions.argmax(-1)
+    # 檢查是否為 tuple，若是則取第一個元素
+    pred_logits = pred.predictions[0] if isinstance(pred.predictions, tuple) else pred.predictions
+    pred_ids = pred_logits.argmax(-1)
     label_ids = pred.label_ids
+    # 將 label 中的 -100 轉換為 tokenizer 的 pad token id
     label_ids[label_ids == -100] = processor.tokenizer.pad_token_id
     pred_str = processor.tokenizer.batch_decode(pred_ids)
     label_str = processor.tokenizer.batch_decode(label_ids)
     wer = jiwer.wer(label_str, pred_str)
     return {"wer": wer}
+
 
 # ===========================
 # 8. 建立抽樣驗證集
@@ -187,9 +191,13 @@ training_args = TrainingArguments(
     ddp_find_unused_parameters=False,
     gradient_checkpointing=True,      # 已啟用梯度檢查點以節省記憶體
     remove_unused_columns=False,
-    dataloader_drop_last=True
+    dataloader_drop_last=True,
+    deepspeed="./config/ds_config.json"  # ← 新增這一行，設定 DeepSpeed 配置檔的路徑
 )
 print("訓練參數設定完成。")
+
+# 在這裡印出 DeepSpeed 設定，確認是否正確傳入
+print("DeepSpeed 設定:", training_args.deepspeed)
 
 # ===========================
 # 10. 建立 Trainer 並開始訓練
