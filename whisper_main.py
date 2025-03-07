@@ -4,6 +4,7 @@ import torch
 import torchaudio
 import jiwer
 import numpy as np
+import torch.distributed as dist
 from datasets import load_dataset
 from transformers import (
     WhisperProcessor,
@@ -18,11 +19,10 @@ from data_collator_seq import custom_collator  # 自訂 collator，負責處理 
 # 1. 系統與硬體設定
 # ===========================
 print("設定系統與硬體參數...")
+os.environ["DS_BUILD_CPU_ADAM"] = "0"
 os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-os.environ["OMP_NUM_THREADS"] = "8"
-# 設定記憶體配置參數（若平台支援 expandable_segments 會有幫助）
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True,max_split_size_mb:512"
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 torch.backends.cudnn.benchmark = True
 
 # ===========================
@@ -31,7 +31,7 @@ torch.backends.cudnn.benchmark = True
 print("設定模型與資料路徑...")
 MODEL_NAME = "../sslab_model/whisper-large-zh-cv11"
 DATA_PATH = "../sslab_dataset/sutiau-wav"
-OUTPUT_DIR = "./whisper_taiwanese"
+OUTPUT_DIR = "/mnt/disk_2/arvin/sslab_trained_model/whisper_taiwanese"
 TRAIN_AUDIO_PATH = os.path.join(DATA_PATH, "train")
 VAL_AUDIO_PATH = os.path.join(DATA_PATH, "val")
 print(f"模型路徑: {MODEL_NAME}")
@@ -208,7 +208,7 @@ trainer = Trainer(
     args=training_args,
     train_dataset=dataset["train"],
     eval_dataset=sampled_eval_dataset,
-    tokenizer=processor.tokenizer,
+    processing_class=processor,  # 改用 processing_class 取代 tokenizer
     data_collator=data_collator,
     compute_metrics=compute_metrics
 )
@@ -224,3 +224,6 @@ else:
     trainer.train()
 
 print("訓練完成。")
+
+if dist.is_initialized():
+    dist.destroy_process_group()  # 銷毀分散式進程群，避免 NCCL 警告
